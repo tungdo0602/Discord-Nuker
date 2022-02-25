@@ -1,0 +1,9 @@
+{
+  "threads": 100,
+  "proxy_timeout": 6000,
+  "guildId": "",
+  "channelId": "",
+  "channelName": "",
+  "channelType": 0,
+  "Message": ""
+}
