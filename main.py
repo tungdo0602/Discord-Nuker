@@ -50,7 +50,10 @@ def createChannel(token, guildId, channelName="new-channel", type=0, message=Non
         channelId = cc.json().get("id")
         if cc.status_code == 201:
             if message != None:
-                requests.post(f"https://discord.com/api/v9/channels/{channelId}/messages", headers={"authorization": token}, json={"content": message,"tts": False}, proxies=proxy_form, timeout=data["proxy_timeout"])
+                try:
+                    requests.post(f"https://discord.com/api/v9/channels/{channelId}/messages", headers={"authorization": token}, json={"content": message,"tts": False}, proxies=proxy_form, timeout=data["proxy_timeout"])
+                except:
+                    pass
             print(Fore.GREEN + "Created!", end="\n")
         else:
             print(Fore.RED + f"Failed to Create channel! | {cc.status_code}", end="\n")
