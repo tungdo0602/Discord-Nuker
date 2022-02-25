@@ -7,3 +7,7 @@ Bot tokenhere
 Bot tokenhere
 normalusertokenhere
 ```
+## Some useful docs
+```
+channel Type: 0 (text channel), 2 (voice channel), 4 (category)
+```
