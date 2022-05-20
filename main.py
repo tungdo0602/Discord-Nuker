@@ -1,3 +1,4 @@
+from ast import For
 import requests
 import threading
 import os
@@ -6,9 +7,13 @@ from colorama import *
 import random
 import json
 import base64
+import time
 
-config = {"threads": 10,"proxy_timeout": 6000,"guildId": "", "channelId": "", "channelName": "", "channelType": 0, "Message": ""}
+isIdling = False
 
+config = {"threads": 10,"proxy_timeout": 6000,"guildId": "", "channelId": "", "channelName": "", "channelType": 0, "Message": "", "webhookName": "ABC", "adminToken": ""}
+webhookToken = []
+webhookId = []
 try:
     if os.stat("config.json").st_size == 0:
         with open("config.json", "w") as f:
@@ -43,6 +48,7 @@ def cls():
     os.system('cls' if os.name=='nt' else 'clear')
 
 def createChannel(token, guildId, channelName="new-channel", type=0, message=None):
+    global proxies
     proxy = random.choice(list(proxies))
     proxy_form = {'http': f"socks4://{proxy}", 'https': f"socks4://{proxy}"}
     try:
@@ -61,12 +67,20 @@ def createChannel(token, guildId, channelName="new-channel", type=0, message=Non
         pass
 
 def sendMessage(token, channelid, content):
+    global isIdling
+    global proxies
     proxy = random.choice(list(proxies))
     proxy_form = {'http': f"socks4://{proxy}", 'https': f"socks4://{proxy}"}
     try:
         sm = requests.post(f"https://discord.com/api/v9/channels/{channelid}/messages", headers={"authorization": token}, json={"content": content,"tts": False}, proxies=proxy_form, timeout=data["proxy_timeout"])
         if sm.status_code == 200:
             print(Fore.GREEN + "Sent!", end="\n")
+        elif sm.status_code == 429:
+            if isIdling == False:
+                print(Fore.RED + "Rate limit! retry after: {}".format(sm.json().get("retry_after")))
+                isIdling = True
+                time.sleep(int(sm.json().get("retry_after")))
+                isIdling = False
         else:
             print(Fore.RED + f"Failed to send! | {sm.status_code}", end="\n")
     except:
@@ -126,7 +140,31 @@ def Inviter():
     for token in tokens:
         joinGuild(token, inviteCode)
 
-print(f"""
+def createWebhook(token, channelId, webhookName):
+    a = requests.post(f"https://discord.com/api/v9/channels/{channelId}/webhooks", headers={"authorization": token}, json={"name": webhookName})
+    if a.status_code == 200:
+        return [a.json().get("token"), a.json().get("id")]
+    else:
+        print(Fore.RED + "Couldn't create webhook!")
+
+def sendWebhookMessage(webhookToken, webhookId, message, username="Bot"):
+    global proxies
+    proxy = random.choice(list(proxies))
+    proxy_form = {'http': f"socks4://{proxy}", 'https': f"socks4://{proxy}"}
+    a = requests.post(f"https://discord.com/api/webhooks/{webhookId}/{webhookToken}", json={"content": message, "username": username}, proxies=proxy_form, timeout=data["proxy_timeout"])
+    if a.status_code == 200:
+        print(Fore.GREEN + "Successfully Send the message!")
+    else:
+        print(Fore.RED + "Failed to send the message!")
+
+def whSpammer(whToken, whId, message, username="Bot"):
+    global webhookId
+    global webhookToken
+
+def main():
+    global webhookId
+    global webhookToken
+    print(f"""
 {Fore.LIGHTBLUE_EX}
 ██████╗░██╗░██████╗░█████╗░░█████╗░██████╗░██████╗░  ███╗░░██╗██╗░░░██╗██╗░░██╗███████╗██████╗░
 ██╔══██╗██║██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗  ████╗░██║██║░░░██║██║░██╔╝██╔════╝██╔══██╗
@@ -138,14 +176,26 @@ print(f"""
 [1] Spam message
 [2] Mass Channel Creator
 [3] Mass Token Joiner (WIP)
+[4] Webhook Creator
+[5] Webhook Spammer
 """)
-mode = input("Mode: ")
-cls()
-if mode == "1":
-    for i in range(data["threads"]):
-        threading.Thread(target=spam).start()
-elif mode == "2":
-    for i in range(data["threads"]):
-        threading.Thread(target=spamChannel).start()
-elif mode == "3":
-    Inviter()
+    mode = input("Mode: ")
+    cls()
+    if mode == "1":
+        for i in range(data["threads"]):
+            threading.Thread(target=spam).start()
+    elif mode == "2":
+        for i in range(data["threads"]):
+            threading.Thread(target=spamChannel).start()
+    elif mode == "3":
+        Inviter()
+    elif mode == "4":
+        whc = int(input("How Many Webhook: "))
+        cid = input("Channel Id: ")
+        for i in range(whc):
+            webhookToken.append(createWebhook(data['adminToken'], cid, data["webhookName"])[0])
+            webhookId.append(createWebhook(data['adminToken'], cid, data["webhookName"])[1])
+        return main()
+    
+if __name__ == '__main__':
+    main()
