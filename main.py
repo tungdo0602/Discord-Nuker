@@ -1,4 +1,5 @@
 from ast import For
+from webbrowser import get
 import requests
 import threading
 import os
@@ -10,10 +11,10 @@ import base64
 import time
 
 isIdling = False
+isIdling2 = False
 
 config = {"threads": 10,"proxy_timeout": 6000,"guildId": "", "channelId": "", "channelName": "", "channelType": 0, "Message": "", "webhookName": "ABC", "adminToken": ""}
-webhookToken = []
-webhookId = []
+webhookURL = []
 try:
     if os.stat("config.json").st_size == 0:
         with open("config.json", "w") as f:
@@ -143,23 +144,35 @@ def Inviter():
 def createWebhook(token, channelId, webhookName):
     a = requests.post(f"https://discord.com/api/v9/channels/{channelId}/webhooks", headers={"authorization": token}, json={"name": webhookName})
     if a.status_code == 200:
-        return [a.json().get("token"), a.json().get("id")]
+        return {"token": a.json().get("token"), "id": a.json().get("id")}
     else:
         print(Fore.RED + "Couldn't create webhook!")
 
-def sendWebhookMessage(webhookToken, webhookId, message, username="Bot"):
+def sendWebhookMessage(whURL, message, username="Bot"):
     global proxies
+    global isIdling2
     proxy = random.choice(list(proxies))
     proxy_form = {'http': f"socks4://{proxy}", 'https': f"socks4://{proxy}"}
-    a = requests.post(f"https://discord.com/api/webhooks/{webhookId}/{webhookToken}", json={"content": message, "username": username}, proxies=proxy_form, timeout=data["proxy_timeout"])
-    if a.status_code == 200:
-        print(Fore.GREEN + "Successfully Send the message!")
-    else:
-        print(Fore.RED + "Failed to send the message!")
+    try:
+        a = requests.post(whURL, json={"content": message, "username": username}, proxies=proxy_form, timeout=data["proxy_timeout"])
+        if a.status_code == 200:
+            print(Fore.GREEN + "Successfully Send the message!")
+        elif a.status_code == 429:
+            if isIdling2 == False:
+                print(Fore.RED + "Rate limit! retry after: {}".format(a.json().get("retry_after")))
+                isIdling2 = True
+                time.sleep(int(a.json().get("retry_after")))
+                isIdling2 = False
+        else:
+            print(Fore.RED + "Failed to send the message!")
+    except:
+        pass
 
-def whSpammer(whToken, whId, message, username="Bot"):
-    global webhookId
-    global webhookToken
+def whSpammer():
+    global webhookURL
+    while True:
+        for i in webhookURL:
+            sendWebhookMessage(i, data['Message'])
 
 def main():
     global webhookId
@@ -193,9 +206,17 @@ def main():
         whc = int(input("How Many Webhook: "))
         cid = input("Channel Id: ")
         for i in range(whc):
-            webhookToken.append(createWebhook(data['adminToken'], cid, data["webhookName"])[0])
-            webhookId.append(createWebhook(data['adminToken'], cid, data["webhookName"])[1])
+            try:
+                webhookGen = createWebhook(data['adminToken'], cid, data["webhookName"])
+                whTk = webhookGen.get("token")
+                whId = webhookGen.get("id")
+                webhookURL.append(f"https://discord.com/api/webhooks/{whId}/{whTk}")
+            except:
+                pass
         return main()
+    elif mode == "5":
+        for i in range(data["threads"]):
+            threading.Thread(target=whSpammer).start()
     
 if __name__ == '__main__':
     main()
