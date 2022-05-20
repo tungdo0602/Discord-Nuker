@@ -1,5 +1,3 @@
-from ast import For
-from webbrowser import get
 import requests
 import threading
 import os
