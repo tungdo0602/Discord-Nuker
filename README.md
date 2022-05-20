@@ -7,6 +7,9 @@ Bot tokenhere
 Bot tokenhere
 normalusertokenhere
 ```
+
+### Notes: `admin_token` are for some special request like `create channel`, `create webhook`,...
+
 ## Some useful docs
 ```
 channel Type: 0 (text channel), 2 (voice channel), 4 (category)
